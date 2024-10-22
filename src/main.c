@@ -6,8 +6,28 @@
 #include "audio.h"
 #include "ch32v003_touch.h"
 
+#define LED_D		PD3
+#define LED_F		PD4
+#define LED_I		PD5
+#define LED_U		PD6
+
+#define AUDIO_EN	PA1
+
+#define PWM_OUT		PC4
+
+#define TOUCH_P		PA1
+
+#define LED_0		PD0
+#define LED_1		PD1
+#define LED_2		PD2
+#define LED_3		PD3
+#define LED_4		PD4
+#define LED_5		PD5
+#define LED_6		PD6
+#define LED_7		PD7
+
 #define SAMPLE_DELAY 6000		// 48MHz / 6000 = 8KHz
-#define TOUCH_THRESHHOLD 6000	// Has to be over this to register as a touch
+#define TOUCH_THRESHHOLD 7000	// Has to be over this to register as a touch
 #define RELEASE_THRESHHOLD 5750 // Has to be under this to register as a release
 #define AUDIO_LOOP_DELAY 3500
 
@@ -22,7 +42,7 @@
 
 #define LED_U_ON (LED_I_OFF + 200)
 #define LED_U_OFF (AUDIO_SIZE - 100)
-// #define DEBUG
+#define DEBUG
 
 uint16_t idx = 0;
 uint8_t button_down = 0;
@@ -30,10 +50,10 @@ uint8_t audio_loop_delaying = 0;
 
 void all_dfiu_leds_off()
 {
-	funDigitalWrite(PC0, FUN_LOW);
-	funDigitalWrite(PC1, FUN_LOW);
-	funDigitalWrite(PC2, FUN_LOW);
-	funDigitalWrite(PC3, FUN_LOW);
+	funDigitalWrite(LED_D, FUN_LOW);
+	funDigitalWrite(LED_F, FUN_LOW);
+	funDigitalWrite(LED_I, FUN_LOW);
+	funDigitalWrite(LED_U, FUN_LOW);
 }
 
 void audio_start()
@@ -42,7 +62,7 @@ void audio_start()
 	all_dfiu_leds_off();
 	idx = 0;
 	// turn offf audio disable pin
-	funDigitalWrite(PD0, FUN_LOW);
+	funDigitalWrite(AUDIO_EN, FUN_LOW);
 	// Enable TIM1
 	TIM1->CTLR1 |= TIM_CEN;
 
@@ -53,7 +73,7 @@ void audio_stop()
 {
 	all_dfiu_leds_off();
 	// turn on audio disable pin. disabled high
-	funDigitalWrite(PD0, FUN_HIGH);
+	funDigitalWrite(AUDIO_EN, FUN_HIGH);
 	TIM1->CTLR1 &= ~TIM_CEN;
 	TIM2->CTLR1 &= ~TIM_CEN;
 }
@@ -63,28 +83,28 @@ void dfiu_leds_update()
 	switch (idx)
 	{
 	case LED_D_ON:
-		funDigitalWrite(PC0, FUN_HIGH);
+		funDigitalWrite(LED_D, FUN_HIGH);
 		break;
 	case LED_D_OFF:
-		funDigitalWrite(PC0, FUN_LOW);
+		funDigitalWrite(LED_D, FUN_LOW);
 		break;
 	case LED_F_ON:
-		funDigitalWrite(PC1, FUN_HIGH);
+		funDigitalWrite(LED_F, FUN_HIGH);
 		break;
 	case LED_F_OFF:
-		funDigitalWrite(PC1, FUN_LOW);
+		funDigitalWrite(LED_F, FUN_LOW);
 		break;
 	case LED_I_ON:
-		funDigitalWrite(PC2, FUN_HIGH);
+		funDigitalWrite(LED_I, FUN_HIGH);
 		break;
 	case LED_I_OFF:
-		funDigitalWrite(PC2, FUN_LOW);
+		funDigitalWrite(LED_I, FUN_LOW);
 		break;
 	case LED_U_ON:
-		funDigitalWrite(PC3, FUN_HIGH);
+		funDigitalWrite(LED_U, FUN_HIGH);
 		break;
 	case LED_U_OFF:
-		funDigitalWrite(PC3, FUN_LOW);
+		funDigitalWrite(LED_U, FUN_LOW);
 		break;
 	}
 }
@@ -128,16 +148,16 @@ void TIM2_IRQHandler(void)
 
 void gpios_init()
 {
-	funPinMode(PD0, GPIO_Speed_10MHz | GPIO_CNF_OUT_PP); // Audio Enable
-	funPinMode(PC0, GPIO_Speed_10MHz | GPIO_CNF_OUT_PP); // D LED
-	funPinMode(PC1, GPIO_Speed_10MHz | GPIO_CNF_OUT_PP); // F LED
-	funPinMode(PC2, GPIO_Speed_10MHz | GPIO_CNF_OUT_PP); // I LED
-	funPinMode(PC3, GPIO_Speed_10MHz | GPIO_CNF_OUT_PP); // U LED
-	// funPinMode( PC4, GPIO_Speed_10MHz | GPIO_CNF_OUT_PP ); //PWM
+	funPinMode(AUDIO_EN, GPIO_Speed_10MHz | GPIO_CNF_OUT_PP); // Audio Enable
+	funPinMode(LED_D, GPIO_Speed_10MHz | GPIO_CNF_OUT_PP); // D LED
+	funPinMode(LED_F, GPIO_Speed_10MHz | GPIO_CNF_OUT_PP); // F LED
+	funPinMode(LED_I, GPIO_Speed_10MHz | GPIO_CNF_OUT_PP); // I LED
+	funPinMode(LED_U, GPIO_Speed_10MHz | GPIO_CNF_OUT_PP); // U LED
+	funPinMode(PWM_OUT, GPIO_Speed_10MHz | GPIO_CNF_OUT_PP_AF); 
 
 	// PC4 is T1CH4, 10MHz Output alt func, push-pull
-	GPIOC->CFGLR &= ~(0xf << (4 * 4));
-	GPIOC->CFGLR |= (GPIO_Speed_10MHz | GPIO_CNF_OUT_PP_AF) << (4 * 4);
+	// GPIOC->CFGLR &= ~(0xf << (4 * 4));s
+	// GPIOC->CFGLR |= (GPIO_Speed_10MHz | GPIO_CNF_OUT_PP_AF) << (4 * 4);
 }
 
 void pwm_init()
@@ -212,7 +232,7 @@ void sao_init()
 	InitTouchADC();
 
 	// turn on audio disable pin. disabled high
-	funDigitalWrite(PD0, FUN_HIGH);
+	funDigitalWrite(AUDIO_EN, FUN_HIGH);
 }
 
 void button_state_update()
@@ -223,7 +243,7 @@ void button_state_update()
 #endif
 	uint32_t touch_val;
 
-	touch_val = ReadTouchPin(GPIOD, 4, 7, 3);
+	touch_val = ReadTouchPin(GPIOD, 2, 3, 3);
 
 #ifdef DEBUG
 	printf("touch_val %d\n", touch_val);
