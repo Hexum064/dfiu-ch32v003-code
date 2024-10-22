@@ -9,13 +9,13 @@
 #define SAMPLE_DELAY 6000		// 48MHz / 6000 = 8KHz
 #define TOUCH_THRESHHOLD 6000	// Has to be over this to register as a touch
 #define RELEASE_THRESHHOLD 5750 // Has to be under this to register as a release
-#define AUDIO_LOOP_DELAY 550
+#define AUDIO_LOOP_DELAY 3500
 
 #define LED_D_ON 100
 #define LED_D_OFF (LED_D_ON + 3150)
 
-#define LED_F_ON (LED_D_OFF + 200)
-#define LED_F_OFF (LED_F_ON + 2800)
+#define LED_F_ON (LED_D_OFF + 400)
+#define LED_F_OFF (LED_F_ON + 2600)
 
 #define LED_I_ON (LED_F_OFF + 200)
 #define LED_I_OFF (LED_I_ON + 2000)
