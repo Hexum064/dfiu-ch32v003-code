@@ -1,5 +1,31 @@
 {
     "files.associations": {
-        "ch32v003fun.h": "c"
-    }
+        "ch32v003fun.h": "c",
+        "ch32v003_touch.h": "c"
+    },
+    "cSpell.words": [
+        "ARPE",
+        "ATRLR",
+        "BDTR",
+        "CCER",
+        "CFGLR",
+        "CHCTLR",
+        "CTLR",
+        "dfiu",
+        "DMAINTENR",
+        "GPIOA",
+        "GPIOC",
+        "GPIOD",
+        "gpios",
+        "INTFR",
+        "NVIC",
+        "offf",
+        "OUTDR",
+        "PCENR",
+        "Periph",
+        "PRSTR",
+        "SMCFGR",
+        "SWEVGR",
+        "SWIO"
+    ]
 }

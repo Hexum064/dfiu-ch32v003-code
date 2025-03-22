@@ -1,3 +1,5 @@
+
+
 /* Small example showing how to use the SWIO programming pin to
    do printf through the debug interface */
 
@@ -28,9 +30,11 @@
 #define LED_7		PC7
 
 #define SAMPLE_DELAY 6000		// 48MHz / 6000 = 8KHz
-#define TOUCH_THRESHHOLD 7000	// Has to be over this to register as a touch
-#define RELEASE_THRESHHOLD 5750 // Has to be under this to register as a release
+#define TOUCH_SAMPLE_bm 0b100000000
 #define AUDIO_LOOP_DELAY 3500
+#define BASE_DELAY 50
+#define INPUT_DELAY_MULT 2
+#define LED_UPDATE_DELAY_MULT 5
 
 #define LED_D_ON 100
 #define LED_D_OFF (LED_D_ON + 3150)
@@ -44,11 +48,16 @@
 #define LED_U_ON (LED_I_OFF + 200)
 #define LED_U_OFF (AUDIO_SIZE - 100)
 // #define DEBUG
+// #define TOUCH_DEBUG
 
 uint16_t idx = 0;
 uint8_t button_down = 0;
 uint8_t audio_loop_delaying = 0;
 uint8_t display_led_reg = 0x7F;
+
+#ifdef TOUCH_DEBUG
+uint32_t touch_val;
+#endif
 
 #define DISP_INIT_VAL_LEN 8
 #define DISP_UPDATE 5
@@ -265,9 +274,17 @@ void display_leds_update()
 	uint8_t temp = display_led_reg & 0x01;
 	display_led_reg >>= 1;
 	display_led_reg |= (temp << 7);
+
+#ifdef TOUCH_DEBUG
+	DISP_LEDS_P->OUTDR = (touch_val >> 2);
+#else
 	DISP_LEDS_P->OUTDR = display_led_reg;
+#endif
 
 }
+
+
+
 
 void button_state_update()
 {
@@ -275,16 +292,18 @@ void button_state_update()
 #ifdef DEBUG
 	uint32_t cnt = 0;
 #endif
-	uint32_t touch_val;
 
+#ifndef TOUCH_DEBUG
+uint32_t touch_val;
+#endif
+	
 	touch_val = ReadTouchPin(GPIOD, 2, 3, 3);
 
 #ifdef DEBUG
 	printf("touch_val %d\n", touch_val);
 #endif
-
-	// Don't need to debounce this with the delay
-	if (touch_val > TOUCH_THRESHHOLD && !button_down)
+	
+	if ((touch_val & TOUCH_SAMPLE_bm) && !button_down)
 	{
 #ifdef DEBUG
 		printf("touch %d\n", cnt);
@@ -292,8 +311,8 @@ void button_state_update()
 		audio_start();
 		button_down = 1;
 	}
-
-	if (touch_val < RELEASE_THRESHHOLD && button_down)
+	
+	if (!(touch_val & TOUCH_SAMPLE_bm) && button_down)
 	{
 #ifdef DEBUG
 		printf("release %d\n", cnt);
@@ -308,21 +327,32 @@ int main()
 	SystemInit();
 	sao_init();
 
+	uint8_t input_delay = 0;
 	uint8_t update_delay = 0;
 	uint8_t disp_next_init_delay = 0;
 	uint8_t disp_next_init_cnt = 0;
+	uint32_t tmp;
 
 	display_led_reg = display_init_vals[0];
 
+	//A little pause to let the voltage stabilize 
+	Delay_Ms(100);
+
 	while (1)
 	{
-		Delay_Ms(50);
-		button_state_update();
-
-		update_delay++;	
+		Delay_Ms(BASE_DELAY);
 		
 
-		if (update_delay >= 5)
+		update_delay++;	
+		input_delay++;
+
+		if (input_delay >= INPUT_DELAY_MULT) 
+		{
+			button_state_update();
+			input_delay = 0;
+		}
+
+		if (update_delay >= LED_UPDATE_DELAY_MULT)
 		{
 			disp_next_init_delay++;
 			update_delay = 0;
